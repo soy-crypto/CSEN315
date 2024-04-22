@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="./tailwind-3.4.3.js"></script>
+  </head>
+  <body class="flex flex-col justify-between h-screen">
+    <header class="p-5 flex w-full">
+      <div
+        class="ml-auto text-purple-500 cursor-pointer hover:bg-gray-100 rounded-md p-2"
+        id="login-container"
+      >
+        <!-- user-circle from heroicons -->
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke-width="1.5"
+          stroke="currentColor"
+          class="w-6 h-6"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+          />
+        </svg>
+      </div>
+    </header>
+    <main class="flex flex-col h-1/4 items-center">
+      <header class="w-1/2">
+        <h1 class="text-3xl font-bold underline text-purple-300">
+          URL Shortener
+        </h1>
+        <p class="text-xs mt-1 text-slate-400">
+          Copy a long boring url and paste it below.
+        </p>
+      </header>
+
+      <form class="mt-16 flex w-1/2 relative" action="/api/links" method="post">
+        <label
+          id="input-label"
+          class="absolute text-xs -mt-6 ml-2 text-purple-300"
+        >
+          Long URL
+        </label>
+        <input
+          aria-labelledby="input-label"
+          autofocus
+          class="py-2 px-4 rounded-md bg-gray-100 grow outline-none focus:outline-purple-300"
+          name="url"
+          placeholder="https://your-very-long-url/on-a-page-you-really-want-to-show"
+        />
+        <input class="hidden" name="owner" value="fake-owner" />
+        <button
+          class="ml-5 bg-purple-300 hover:bg-purple-500 active:bg-purple-600 py-2 px-4 rounded-md outline-none focus:outline-purple-300"
+        >
+          Shorten
+        </button>
+      </form>
+      <div
+        id="result"
+        class="px-4 py-2 mt-5 min-w-1/4 max-w-1/2 bg-green-200 rounded-md text-center invisible"
+        aria-hidden="true"
+      ></div>
+    </main>
+    <footer class="p-3 text-xs bg-purple-100">
+      This site is used for educational purposes only. Do not store sensitive
+      information, the data may disappear at any time.
+    </footer>
+    <script type="text/javascript">
+      const resultElement = document.querySelector("#result");
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("error")) {
+        resultElement.classList.remove("invisible");
+        resultElement.classList.add("bg-red-200");
+        resultElement.textContent = `💥 Error while creating link:\n${params.get(
+          "error"
+        )}`;
+      } else if (params.get("link")) {
+        resultElement.classList.remove("invisible");
+        resultElement.classList.add("bg-green-200");
+        resultElement.textContent = `🚀 Successfully created short link: \n${params.get(
+          "link"
+        )}`;
+      }
+      console.log(params);
+    </script>
+  </body>
+</html>

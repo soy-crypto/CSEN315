@@ -1,0 +1,26 @@
+{
+  "77f6f2": {
+    "id": "77f6f2",
+    "url": "https://martinfowler.com/articles/richardsonMaturityModel.html",
+    "owner": "fake-owner",
+    "views": 0,
+    "created_at": "2024-04-08T23:19:40.773099-07:00",
+    "updated_at": "2024-04-08T23:19:40.7731-07:00"
+  },
+  "7db0f6": {
+    "id": "7db0f6",
+    "url": "https://martinfowler.com/articles/richardsonMaturityModel.html",
+    "owner": "fake-owner",
+    "views": 0,
+    "created_at": "2024-04-09T20:47:18.201263-07:00",
+    "updated_at": "2024-04-09T20:47:18.201264-07:00"
+  },
+  "d9d19b": {
+    "id": "d9d19b",
+    "url": "",
+    "owner": "real-owner",
+    "views": 0,
+    "created_at": "2024-04-08T23:21:28.967061-07:00",
+    "updated_at": "2024-04-08T23:21:28.967062-07:00"
+  }
+}
