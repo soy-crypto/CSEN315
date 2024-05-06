@@ -22,4 +22,5 @@ func NewServer(ls datastore.LinkStorer) *serverImpl {
 	return &serverImpl{
 		linkStore: ls,
 	}
+
 }

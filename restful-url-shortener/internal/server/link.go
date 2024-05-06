@@ -50,6 +50,7 @@ type createLinkParams struct {
 func (s *serverImpl) CreateLink(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	// retrieve the value of the content-type header, if none is specified
 	// the request should be rejected
+	fmt.Printf("CREATE \n")
 	contentType := r.Header.Get("content-type")
 	if contentType == "" {
 		fmt.Println("CreateLink: no content-type header is sent")
@@ -101,6 +102,7 @@ func (s *serverImpl) CreateLink(w http.ResponseWriter, r *http.Request, _ httpro
 		} else {
 			owner = formOwner[0]
 		}
+
 	}
 
 	// call the datastore function
@@ -118,9 +120,138 @@ func (s *serverImpl) CreateLink(w http.ResponseWriter, r *http.Request, _ httpro
 
 // read a header / body to get a user
 // return a list of links in json format where Owner == user passed in
-func (s *serverImpl) GetUserLinks(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	w.Write([]byte("GetUserLinks"))
+func (s *serverImpl) GetUserLinks(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	// ps are the parameters attached to this route. the paramter to ByName()
+	// must match the name of the link from main.go
+	// retrieve the value of the content-type header, if none is specified
+	// the request should be rejected
+	fmt.Printf("GET \n")
+	contentType := r.Header.Get("content-type")
+	fmt.Printf("contentType " + contentType + " \n")
+	// do some preemptive error checking
+	// must match the name of the link from main.go
+
+	// access the datastore attached to the server and try to fetch the link
+	userName := ps.ByName("user")
+	links := s.linkStore.GetUserLinks(userName)
+	if links == nil {
+		fmt.Printf("GETLinks: no entry for current user \n")
+		w.WriteHeader(404)
+		return
+	}
+
+	// show final result
+	fmt.Fprintf(w, "-------------------------------Results--------------------------------\n")
+	for index, link := range links {
+		// index is the index where we are
+		// element is the element from someSlice for where we are
+		json, err := json.Marshal(link)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		fmt.Fprintf(w, "%d   %s\n", index, string(json))
+	}
+
+	//w.Write([]byte(link))
 }
+
 func (s *serverImpl) DeleteLink(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	w.Write([]byte("DeleteLink"))
+	//Base Check
+	fmt.Printf("DELETE \n")
+	contentType := r.Header.Get("content-type")
+	/*
+		for k, v := range r.Header {
+			fmt.Fprintf(w, "Header field %q, Value %q\n", k, v)
+		}
+	*/
+
+	var url string
+	var owner string
+	if strings.Contains(contentType, "json") {
+		// read the body of the request
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			fmt.Printf("GETLinks: error while reading body of request %v\n", err)
+			w.WriteHeader(400)
+			return
+		}
+
+		// convert the request body into json
+		lp := &createLinkParams{}
+		err = json.Unmarshal(body, lp)
+		if err != nil {
+			fmt.Printf("GETLinks: error while unmarshalling err=%v. \n body=%s\n", err, body)
+			w.WriteHeader(400)
+			return
+		}
+
+		url = lp.Url
+		owner = lp.Owner
+	} else if strings.Contains(contentType, "form") {
+
+		// when dealing with form data, call ParseForm to trigger parsing
+		// then r.Form will have a map of the form values
+		r.ParseForm()
+		if formUrl, ok := r.Form["url"]; !ok || len(formUrl) == 0 || formUrl[0] == "" {
+			fmt.Println("GETLinks: url key is not part of form data")
+			w.Header().Add("Location", fmt.Sprintf("/public?error=%s", "cannot create a link without a url"))
+			w.WriteHeader(303)
+			return
+		} else {
+			url = formUrl[0]
+		}
+
+		if formOwner, ok := r.Form["owner"]; !ok || len(formOwner) == 0 || formOwner[0] == "" {
+			fmt.Println("GETLinks: owner key is not part of form data")
+			w.Header().Add("Location", fmt.Sprintf("/public?error=%s", "cannot create a link without an owner"))
+			w.WriteHeader(303)
+			return
+		} else {
+			owner = formOwner[0]
+		}
+
+	}
+
+	fmt.Printf("url: " + url + " owner: " + owner + "\n")
+
+	//Init
+	// ps are the parameters attached to this route. the paramter to ByName()
+	// must match the name of the link from main.go
+	user := ps.ByName("user")
+	fmt.Println("\nuser:", user)
+
+	// do some preemptive error checking
+	if len(user) <= 0 {
+		fmt.Println("DELETELink: no user provided")
+		w.WriteHeader(400)
+		return
+	}
+
+	// access the datastore attached to the server and try to fetch the link
+	links, err := s.linkStore.DeleteLink(url, user)
+	if errors.Is(err, &datastore.NotFoundError{}) {
+		fmt.Printf("DeleteLink: no entry for user=%s\n", user)
+		w.WriteHeader(404)
+		return
+	}
+
+	// show final result
+	fmt.Fprintf(w, "-------------------------------Results--------------------------------\n")
+	for index, link := range links {
+		// index is the index where we are
+		// element is the element from someSlice for where we are
+		json, err := json.Marshal(link)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		fmt.Fprintf(w, "%d   %s\n", index, string(json))
+	}
+
+	// return a 302 to redirect users
+	w.Write([]byte("DeleteLink Success!"))
+
 }

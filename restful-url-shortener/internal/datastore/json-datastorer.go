@@ -90,20 +90,67 @@ func (store *JsonFileStore) CreateLink(url string, owner string) (*Link, error) 
 		Views:     0,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
+		ShortLink: fmt.Sprintf("localhost:8080/%s", id),
 	}
 
 	store.cache[id] = link
 	go store.updateFile()
+
 	return &link, nil
 }
 
 // GetUserLinks retrieves all links from the datastore which are owned by the given user
 func (store *JsonFileStore) GetUserLinks(user string) []Link {
-	return []Link{}
+	fmt.Println("GetUserLinks " + user)
+	//Base Check
+	if user == "" {
+		fmt.Println("user is NULL")
+		return []Link{}
+	}
+
+	//Init
+	links := []Link{}
+
+	//Compute
+	for key, value := range store.cache {
+		fmt.Println(key, value)
+		if value.Owner == user {
+			links = append(links, value)
+		}
+	}
+
+	//Return
+	return links
 }
 
 // DeleteLink deletes a link from the store's cache if it's present and then updates the file
 // in which all inkls are stored
-func (store *JsonFileStore) DeleteLink(id string, user string) error {
-	return nil
+func (store *JsonFileStore) DeleteLink(id string, user string) ([]Link, error) {
+	//Base Check
+	fmt.Println("DeleteLink", id, " ", user)
+
+	//Init
+	store.writeLock.Lock()
+	defer store.writeLock.Unlock()
+
+	//Compute
+	for key, value := range store.cache {
+		fmt.Println(key, value)
+		if value.Owner == user {
+			delete(store.cache, key)
+		}
+
+	}
+
+	//update cache
+	go store.updateFile()
+
+	//result
+	links := []Link{}
+	for _, value := range store.cache {
+		links = append(links, value)
+	}
+
+	//Return
+	return links, nil
 }

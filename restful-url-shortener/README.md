@@ -8,7 +8,7 @@ The task for this assignment is to finish the shortlink portion of the RESTful U
 Shortener we started in class. For full credit, you'll need to: 
 
 1. Complete datastore method and add route to retrieve all links for a user 
-2. Complete datastore method and add routes to deleta a link for a user
+2. Complete datastore method and add routes to delete a link for a user
 3. Add relationship links to the new and existing entries such that a client can use those links to replace hardcoded links. 
 
 ## Homework Criteria (Total Points Available: 15)
@@ -24,5 +24,5 @@ errors.
 
 ## What you don't need to do
 
-- You should only need to changethe existing code to complete the HATEOAS portion of the assignment. But you should be able to understand the existing code sicne it'll help in completing the other tasks. 
+- You should only need to change the existing code to complete the HATEOAS portion of the assignment. But you should be able to understand the existing code sicne it'll help in completing the other tasks. 
 - You should not need to update the front end portion, but if you run the server and connect to the front end, the CreateLink should already be working. So if you'd like to create multiple links from there, feel free. 

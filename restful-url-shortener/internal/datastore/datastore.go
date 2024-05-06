@@ -13,6 +13,7 @@ type Link struct {
 	Views     int64     `json:"views"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
+	ShortLink string    `json:"shortLink"`
 }
 
 // LinkStorer is an interface which defines the set of operations
@@ -21,5 +22,5 @@ type LinkStorer interface {
 	GetLink(id string) (*Link, error)
 	GetUserLinks(user string) []Link
 	CreateLink(url string, owner string) (*Link, error)
-	DeleteLink(url string, user string) error
+	DeleteLink(url string, user string) ([]Link, error)
 }

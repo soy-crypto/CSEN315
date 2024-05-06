@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -30,9 +31,18 @@ func main() {
 	router.GET("/l/:link", server.GetLink)
 	router.POST("/api/links", server.CreateLink)
 
+	// newly-added
+	router.GET("/", Index)
+	router.GET("/get/links/:user", server.GetUserLinks)
+	router.GET("/del/links/:user", server.DeleteLink)
+
 	// serve all files from the directory specified (from command line arguments)
 	router.ServeFiles("/public/*filepath", http.Dir(*directory))
 
 	// start running the server. any error is considered fatal
 	log.Fatal(http.ListenAndServe(*port, router))
+}
+
+func Index(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	fmt.Fprint(w, "Welcome!\n")
 }
