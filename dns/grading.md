@@ -4,11 +4,11 @@ Add an `X` in the `GRD` column for each criteria you'd like me to grade.
 
 | GRD | Points | ID          | Test Criteria                                                                                 |
 | --- | -----: | ----------- | --------------------------------------------------------------------------------------------- |
-|     |     20 | A_RECORD    | Print the IPv4 address of each site if it exists                                              |
-|     |      5 | AAAA_RECORD | Print the IPv6 address of each site if it exists                                              |
-|     |      5 | NS_RECORD   | Print the domain name and IP address of an NS of each site                                    |
-|     |      5 | CNAME       | If the given name is a CNAME, resolves the IPv4 of the canonical name. If not, prints nothing |
-|     |      5 | TXT         | When a TXT record is requested, return a random number in the given range                     |
+| X   |     20 | A_RECORD    | Print the IPv4 address of each site if it exists                                              |
+| X   |      5 | AAAA_RECORD | Print the IPv6 address of each site if it exists                                              |
+| X   |      5 | NS_RECORD   | Print the domain name and IP address of an NS of each site                                    |
+| X   |      5 | CNAME       | If the given name is a CNAME, resolves the IPv4 of the canonical name. If not, prints nothing |
+| X   |      5 | TXT         | When a TXT record is requested, return a random number in the given range                     |
 |     |      5 | CACHING     | Cache all response records for as long as the TTL specifies and serve back cached records     |
 
 

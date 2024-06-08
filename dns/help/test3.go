@@ -3,119 +3,21 @@ package main
 import (
 	"bufio"
 	"crypto/rand"
-	"flag"
 	"fmt"
 	"math/big"
 	"net"
-	"os"
 	"strings"
 
 	"golang.org/x/net/dns/dnsmessage"
 )
 
-type RecordType uint16
-
-const (
-	TYPE_A     RecordType = 1
-	TYPE_NS    RecordType = 2
-	TYPE_CNAME RecordType = 5
-	TYPE_TXT   RecordType = 16
-	TYPE_AAAA  RecordType = 28
-)
-
-var RecordTypes map[string]RecordType = map[string]RecordType{
-	"A":     TYPE_A,
-	"NS":    TYPE_NS,
-	"CNAME": TYPE_CNAME,
-	"TXT":   TYPE_TXT,
-	"AAAA":  TYPE_AAAA,
-}
-
-func main() {
-	// get all command line arguments
-	names := os.Args[1:]
-	t := flag.String("t", "A", "the record type to query for each name")
-	flag.Parse()
-
-	// input validation
-	if len(names) == 0 {
-		fmt.Println("Not enough arguments, must pass in at least one name")
-		os.Exit(1)
-	}
-
-	if _, exists := RecordTypes[*t]; !exists {
-		keys := make([]string, 0, len(RecordTypes))
-		for k := range RecordTypes {
-			keys = append(keys, k)
-		}
-		fmt.Printf("Specified record type %s doesn't exist. Must be one of %v", *t, keys)
-		os.Exit(1)
-	}
-
-	// Invoke the resolve function for each of the given names
-	for _, name := range names {
-		fmt.Printf("%s,%s\n", name, strings.Join(resolve(name, RecordTypes[*t]), ""))
-	}
-
-	fmt.Printf("\n")
-}
-
-// Resolver
-func resolve(name string, t RecordType) []string {
-	// most of your code should go here. use a switch statement
-	// so each resolution type goes into a different function
-	resolvedValue := make([]string, 0, 100)
-	hostName := name + "."
-
-	//Resolve the name
-	/* check what kind of data to be requested to name serverse*/
-	var typ dnsmessage.Type
-	switch t {
-	//enquire about ipv4 address
-	case TYPE_A:
-		typ = 1
-
-	//enquire about ipv6 address
-	case TYPE_AAAA:
-		typ = 28
-
-	//Enquire about
-	case TYPE_CNAME:
-		typ = 5
-
-	case TYPE_NS:
-		typ = 2
-
-	case TYPE_TXT:
-		typ = 16
-
-	default:
-		fmt.Printf("Unsupported record type: %v\n", t)
-	}
-
-	/* Do query */
-	address, err := query(hostName, typ)
-	if err != nil {
-		fmt.Printf("Error resolving A record for %s: %v\n", name, err)
-		return resolvedValue
-	}
-
-	resolvedValue = append(resolvedValue, address) // Convert IP to string
-
-	//Result
-	var result []string = make([]string, 1)
-	result[0] = resolvedValue[0]
-
-	//Return
-	return result
-
-}
-
-// ************************************** Newly Added ***************************************************
-// all the address of root servers
 const ROOT_SERVERS = "198.41.0.4,199.9.14.201,192.33.4.12,199.7.91.13,192.203.230.10,192.5.5.241,192.112.36.4,198.97.190.53"
 
-// convert ROOT_SERVERS to an array of root servers
+func main() {
+	name := "www.youtube.com."
+	query(name, dnsmessage.TypeAAAA)
+}
+
 func getRootServers() []net.IP {
 	rootServers := []net.IP{}
 	for _, rootServer := range strings.Split(ROOT_SERVERS, ",") {
@@ -124,98 +26,67 @@ func getRootServers() []net.IP {
 	return rootServers
 }
 
-// Do query of all the root servers
-func query(name string, TYPE dnsmessage.Type) (string, error) {
+func query(name string, TYPE dnsmessage.Type) {
 
-	//Do dns query
-	/* build a question*/
+	/* Do dns query*/
 	Question := dnsmessage.Question{
 		Name:  dnsmessage.MustNewName(name),
 		Type:  TYPE,
 		Class: dnsmessage.ClassINET,
 	}
 
-	/* call the function dnsQuery to get a response from all name servers including root server*/
 	response, err := dnsQuery(getRootServers(), Question)
 	if err != nil {
 		fmt.Println("rand error: %s", err)
 	}
 
-	var INFO string
+	//fmt.Println("responseBuffer: %s", response)
+	fmt.Printf("@@@@@@ HEADER %+v \n", response.Header)
 	for _, answer := range response.Answers {
+		fmt.Printf("STR %+v %+v \n", answer.Header, answer.Body)
+		fmt.Printf("%s\n", answer.Body.GoString())
 		if TYPE == 1 {
 			if strings.Contains(answer.Body.GoString(), "{A: [") {
+				fmt.Printf("1 @@@@@@BODY  %s \n", answer.Body.GoString())
 				originalStr := strings.Split(strings.Split(answer.Body.GoString(), "}")[0], "{")[2]
 				ip := strings.Replace(originalStr, ", ", ".", -1)
-				INFO = ip
+				fmt.Printf("IP %s\n", ip)
 				break
 			}
 
 		} else if TYPE == 28 {
 			if strings.Contains(answer.Body.GoString(), "{AAAA: [") {
+				fmt.Printf("28 @@@@@@BODY  %s \n", answer.Body.GoString())
 				originalStr := strings.Split(strings.Split(answer.Body.GoString(), "}")[0], "{")[2]
 				ip := strings.Replace(originalStr, ", ", ".", -1)
-				//fmt.Printf("IP %s\n", ip)
-				INFO = ip
+				fmt.Printf("IP %s\n", ip)
 				break
 			}
 
 		} else if TYPE == 2 {
-			if strings.Contains(answer.Body.GoString(), "NS: ") {
-				originalStr := strings.Split(strings.Split(strings.Split(answer.Body.GoString(), "}")[0], "(")[1], ")")[0]
-				ip := strings.Replace(originalStr, ", ", ".", -1)
-				INFO = ip
-
-				/* resovle the name sever */
-				/* Do query */
-				INFO = INFO[1:len(INFO)-2] + "."
-				address, err := query(INFO, 1)
-				if err != nil {
-					fmt.Printf("Error resolving A record for %s: %v\n", name, err)
-					return INFO, nil
-				}
-
-				INFO += ", " + address
+			if strings.Contains(answer.Body.GoString(), "NS") {
+				fmt.Printf("2 @@@@@@BODY  %s \n", answer.Body.GoString())
 				break
 			}
 
 		} else if TYPE == 5 {
-			if strings.Contains(answer.Body.GoString(), "CNAME: ") {
-				originalStr := strings.Split(strings.Split(strings.Split(answer.Body.GoString(), "}")[0], "(")[1], ")")[0]
-				ip := strings.Replace(originalStr, ", ", ".", -1)
-				INFO = ip
-
-				/* resovle the name sever */
-				/* Do query */
-				INFO = INFO[1:len(INFO)-2] + "."
-				address, err := query(INFO, 1)
-				if err != nil {
-					fmt.Printf("Error resolving A record for %s: %v\n", name, err)
-					return INFO, nil
-				}
-
-				INFO += ", " + address
+			if strings.Contains(answer.Body.GoString(), "CNAME") {
+				fmt.Printf("5 @@@@@@BODY  %s \n", answer.Body.GoString())
 				break
 			}
 		} else if TYPE == 16 {
-			if strings.Contains(answer.Body.GoString(), "TXT: ") {
-				//fmt.Print("TXT:", answer.Body.GoString())
-				originalStr := strings.Split(strings.Split(strings.Split(answer.Body.GoString(), "}")[0], "{")[2], "\\")[1]
-				ip := strings.Replace(originalStr, ", ", ".", -1)
-				INFO = ip
+			if strings.Contains(answer.Body.GoString(), "TXT") {
+				fmt.Printf("16 @@@@@@BODY  %s \n", answer.Body.GoString())
 				break
 			}
 		} //
 
 	} //for
 
-	//Return
-	return INFO, nil
-
 } //func
 
 func dnsQuery(servers []net.IP, question dnsmessage.Question) (*dnsmessage.Message, error) {
-	//fmt.Printf("Question: %+v\n", question)
+	fmt.Printf("Question: %+v\n", question)
 	for i := 0; i < 3; i++ {
 		//call outgoingDnsQuery
 		dnsAnswer, header, err := outgoingDnsQuery(servers, question)
@@ -223,13 +94,17 @@ func dnsQuery(servers []net.IP, question dnsmessage.Question) (*dnsmessage.Messa
 			return nil, err
 		}
 
-		/* Get retunr ansers */
+		/* get retunr ansers */
 		parsedAnswers, err := dnsAnswer.AllAnswers()
 		if err != nil {
 			return nil, err
 		}
 
 		if header.Authoritative {
+			for _, resource := range parsedAnswers {
+				fmt.Printf("!!!!!!!!!!!Found Header: %+v Body:%+v \n", resource.Header, resource.Body)
+			}
+
 			return &dnsmessage.Message{
 				Header:  dnsmessage.Header{Response: true},
 				Answers: parsedAnswers,
@@ -237,7 +112,7 @@ func dnsQuery(servers []net.IP, question dnsmessage.Question) (*dnsmessage.Messa
 
 		}
 
-		/* Get retunr authorities */
+		/* get retunr authorities */
 		authorities, err := dnsAnswer.AllAuthorities()
 		if err != nil {
 			return nil, err
@@ -249,17 +124,18 @@ func dnsQuery(servers []net.IP, question dnsmessage.Question) (*dnsmessage.Messa
 			}, nil
 		}
 
-		/* Get all the nameserveres*/
+		/* get all the nameserveres*/
 		nameservers := make([]string, len(authorities))
 		for k, authority := range authorities {
+			fmt.Printf("authority: %s \n", authority.Body.GoString())
 			if authority.Header.Type == dnsmessage.TypeNS {
-				//fmt.Printf("authority.Body.(*dnsmessage.NSResource).NS: %s \n", authority.Body.(*dnsmessage.NSResource).NS)
+				fmt.Printf("authority.Body.(*dnsmessage.NSResource).NS: %s \n", authority.Body.(*dnsmessage.NSResource).NS)
 				nameservers[k] = authority.Body.(*dnsmessage.NSResource).NS.String()
-				//fmt.Printf("nameserver: %s \n", nameservers[k])
+				fmt.Printf("nameserver: %s \n", nameservers[k])
 			}
 		}
 
-		/* Get all the additional coresponding to all the authorities */
+		/* get all the additional coresponding to all the authorities */
 		additionals, err := dnsAnswer.AllAdditionals()
 		if err != nil {
 			return nil, err
@@ -267,6 +143,8 @@ func dnsQuery(servers []net.IP, question dnsmessage.Question) (*dnsmessage.Messa
 		newResolverServersFound := false
 		servers = []net.IP{} // set servers as empty
 		for _, additional := range additionals {
+			fmt.Printf("additional: %+v \n", additional)
+			fmt.Printf("additional body: %s \n", additional.Body.GoString())
 			if additional.Header.Type == dnsmessage.TypeA {
 				for _, nameserver := range nameservers {
 					if additional.Header.Name.String() == nameserver {
@@ -315,6 +193,8 @@ func dnsQuery(servers []net.IP, question dnsmessage.Question) (*dnsmessage.Messa
 }
 
 func outgoingDnsQuery(servers []net.IP, question dnsmessage.Question) (*dnsmessage.Parser, *dnsmessage.Header, error) {
+	fmt.Printf("New outgoing dns query for %s, servers: %+v\n", question.Name.String(), servers)
+
 	/*used for randomly choosing a random number*/
 	max := ^uint16(0)
 	randomNumber, err := rand.Int(rand.Reader, big.NewInt(int64(max)))
@@ -379,9 +259,13 @@ func outgoingDnsQuery(servers []net.IP, question dnsmessage.Question) (*dnsmessa
 	if err != nil {
 		return nil, nil, err
 	}
-
 	if len(questions) != len(message.Questions) {
 		return nil, nil, fmt.Errorf("answer packet doesn't have the same amount of questions")
+	}
+
+	err = p.SkipAllQuestions()
+	if err != nil {
+		return nil, nil, err
 	}
 
 	return &p, &header, nil
