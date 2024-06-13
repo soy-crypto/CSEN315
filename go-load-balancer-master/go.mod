@@ -1,5 +1,2 @@
-module github.com/sotnikov-s/go-load-balancer
+module github.com/go-echarts/go-echarts/v2
 
-go 1.14
-
-require github.com/stretchr/testify v1.5.1

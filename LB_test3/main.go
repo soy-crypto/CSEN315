@@ -154,7 +154,9 @@ func healthCheck() {
 			serverPool.HealthCheck()
 			log.Println("Health check completed")
 		}
+
 	}
+	
 }
 
 var serverPool ServerPool
