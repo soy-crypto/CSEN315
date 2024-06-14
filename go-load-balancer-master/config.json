@@ -1,0 +1,9 @@
+{
+    "listenPort": ":8080",
+    "healthCheckInterval": "5s",
+    "servers": [
+        "http://localhost:1081", 
+        "http://localhost:1082", 
+        "http://localhost:1083"
+    ]
+}
