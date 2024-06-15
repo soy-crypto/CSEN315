@@ -343,15 +343,15 @@ func httpserverLoadBalancing(w http.ResponseWriter, _ *http.Request) {
 		}))
 
 	// Put data into instance
-	hitsRB := callRB(100)
-	hitsP2R := callP2R(100)
-	hitsWRB := callWRB(100)
-	hitsLC := callLC(100)
+	hitsRB := callRB(100000)
+	hitsP2R := callP2R(100000)
+	hitsWRB := callWRB(100000)
+	//hitsLC := callLC(5000)
 	bar.SetXAxis([]string{"Server1", "Server2", "Server3", "Server4", "Server5", "Server6", "Server7", "Server8", "Server9", "Server10"}).
 		AddSeries("Round Bobin", generateLoadBalancingItems(hitsRB)).
 		AddSeries("Power of 2 Random", generateLoadBalancingItems(hitsP2R)).
-		AddSeries("Weighted Round Robin", generateLoadBalancingItems(hitsWRB)).
-		AddSeries("Least Connections", generateLoadBalancingItems(hitsLC))
+		AddSeries("Weighted Round Robin", generateLoadBalancingItems(hitsWRB))
+	//AddSeries("Least Connections", generateLoadBalancingItems(hitsLC))
 
 	bar.Render(w)
 }
