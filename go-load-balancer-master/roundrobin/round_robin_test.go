@@ -9,6 +9,21 @@ import (
 )
 
 func TestRoundRobin(t *testing.T) {
+
+	rr, _ := roundrobin.New(
+		&url.URL{Host: "192.168.0.1"},
+		&url.URL{Host: "192.168.0.2"},
+		&url.URL{Host: "192.168.0.3"},
+		&url.URL{Host: "192.168.0.4"},
+	)
+
+	rr.Next() // 192.168.0.1
+	rr.Next() // 192.168.0.2
+	rr.Next() // 192.168.0.3
+	rr.Next() // 192.168.0.4
+	rr.Next() // 192.168.0.1
+	rr.Next() // 192.168.0.2
+
 	tests := []struct {
 		urls     []*url.URL
 		iserr    bool
@@ -21,7 +36,9 @@ func TestRoundRobin(t *testing.T) {
 				{Host: "192.168.33.11"},
 				{Host: "192.168.33.12"},
 			},
+
 			iserr: false,
+
 			want: []*url.URL{
 				{Host: "192.168.33.10"},
 				{Host: "192.168.33.11"},
@@ -29,6 +46,7 @@ func TestRoundRobin(t *testing.T) {
 				{Host: "192.168.33.10"},
 			},
 		},
+
 		{
 			urls:  []*url.URL{},
 			iserr: true,
@@ -51,7 +69,9 @@ func TestRoundRobin(t *testing.T) {
 		if got, want := gots, test.want; !reflect.DeepEqual(got, want) {
 			t.Errorf("tests[%d] - RoundRobin is wrong. want: %v, got: %v", i, want, got)
 		}
+
 	}
+
 }
 
 func BenchmarkRoundRobinSync(b *testing.B) {
@@ -81,8 +101,11 @@ func BenchmarkRoundRobinSync(b *testing.B) {
 				defer wg.Done()
 				rr.Next()
 			}
+
 		})
+
 	}
+
 }
 
 func BenchmarkRoundRobinASync(b *testing.B) {
