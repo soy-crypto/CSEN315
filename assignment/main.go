@@ -174,7 +174,7 @@ func (lc *LeastConnections) SelectServer() *ServerLC {
 // Call RB algorithm
 func callRB(requests int) [10]int {
 	/** --------------------------------Stimulate RB algorithm */
-	fmt.Printf("Simulating RB algorithm\n")
+	//fmt.Printf("Simulating RB algorithm\n")
 	// Define RB servers
 	serversRB := []*ServerRB{
 		{Addr: "server0"},
@@ -195,13 +195,14 @@ func callRB(requests int) [10]int {
 	for i := 0; i < requests; i++ {
 		server := balancerRB.NextServer()
 		n, _ := strconv.Atoi(string(server.Addr[len(server.Addr)-1]))
-		fmt.Printf("Sending request to server: %d\n", n)
+		//fmt.Printf("Sending request to server: %d\n", n)
 		hits[n] = hits[n] + 1
 	}
-
-	for i := 0; i < 10; i++ {
-		fmt.Printf("%d", hits[i])
-	}
+	/*
+		for i := 0; i < 10; i++ {
+			fmt.Printf("%d", hits[i])
+		}
+	*/
 
 	return hits
 } //LRU
@@ -224,19 +225,21 @@ func callP2R(requests int) [10]int {
 	}
 
 	balancerP2R := NewBalancerP2R(serversP2R)
-	fmt.Printf("\nSimulating P2B algorithm\n")
+	//fmt.Printf("\nSimulating P2B algorithm\n")
 	// Simulate handling requests
 	var hits = [10]int{}
 	for i := 0; i < requests; i++ {
 		server := balancerP2R.SelectServer()
 		n, _ := strconv.Atoi(string(server.Addr[len(server.Addr)-1]))
-		fmt.Printf("Sending request to server: %d \n", server.Addr)
+		//fmt.Printf("Sending request to server: %d \n", server.Addr)
 		hits[n] = hits[n] + 1
 	}
 
-	for i := 0; i < 10; i++ {
-		fmt.Printf("%d", hits[i])
-	}
+	/*
+		for i := 0; i < 10; i++ {
+			fmt.Printf("%d", hits[i])
+		}
+	*/
 
 	return hits
 
@@ -266,12 +269,8 @@ func callWRB(requests int) [10]int {
 	for i := 0; i < requests; i++ {
 		server := balancerWRR.NextServer()
 		n, _ := strconv.Atoi(string(server.Addr[len(server.Addr)-1]))
-		fmt.Printf("Sending request to server: %s (weight: %d)\n", server.Addr, server.Weight)
+		//fmt.Printf("Sending request to server: %s (weight: %d)\n", server.Addr, server.Weight)
 		hits[n] = hits[n] + 1
-	}
-
-	for i := 0; i < 10; i++ {
-		fmt.Printf("%d", hits[i])
 	}
 
 	return hits
@@ -301,7 +300,7 @@ func callLC(requests int) [10]int {
 	for i := 0; i < requests; i++ {
 		server := balancer.SelectServer()
 		// Simulate handling the request
-		fmt.Printf("Request %d sent to server %s (Active connections: %d)\n", i+1, server.Addr, server.Active)
+		//fmt.Printf("Request %d sent to server %s (Active connections: %d)\n", i+1, server.Addr, server.Active)
 
 		//Update hits
 		n, _ := strconv.Atoi(string(server.Addr[len(server.Addr)-1]))
@@ -344,15 +343,15 @@ func httpserverLoadBalancing(w http.ResponseWriter, _ *http.Request) {
 		}))
 
 	// Put data into instance
-	hitsRB := callRB(100)
-	hitsP2R := callP2R(100)
-	hitsWRB := callWRB(100)
-	hitsLC := callLC(100)
+	hitsRB := callRB(10000)
+	hitsP2R := callP2R(10000)
+	hitsWRB := callWRB(10000)
+	//hitsLC := callLC(10000)
 	bar.SetXAxis([]string{"Server1", "Server2", "Server3", "Server4", "Server5", "Server6", "Server7", "Server8", "Server9", "Server10"}).
 		AddSeries("Round Bobin", generateLoadBalancingItems(hitsRB)).
 		AddSeries("Power of 2 Random", generateLoadBalancingItems(hitsP2R)).
-		AddSeries("Weighted Round Robin", generateLoadBalancingItems(hitsWRB)).
-		AddSeries("Least Connections", generateLoadBalancingItems(hitsLC))
+		AddSeries("Weighted Round Robin", generateLoadBalancingItems(hitsWRB))
+		//AddSeries("Least Connections", generateLoadBalancingItems(hitsLC))
 
 	bar.Render(w)
 }
