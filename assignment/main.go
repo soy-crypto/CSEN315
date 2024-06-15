@@ -2,9 +2,11 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"math/rand"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/go-echarts/go-echarts/v2/charts"
@@ -119,78 +121,57 @@ func (b *Balancer) NextServer() *Server {
 	return b.servers[0]
 }
 
-/** ---------------------------------------------LRU-------------------------------------------*/
+/** --------------------------------------------Least Connections-------------------------------------------*/
 // Server represents a backend server in the pool
-type ServerLRU struct {
-	Addr string
+type ServerLC struct {
+	Addr   string
+	mu     sync.Mutex
+	Active int // Tracks the number of active connections
 }
 
-// Node represents a node in the linked list for LRU balancing
-type Node struct {
-	Server *ServerLRU
-	Next   *Node
-	Prev   *Node
+// Balancer interface defines the common logic for selecting a server
+type BalancerLC interface {
+	SelectServer() *Server
 }
 
-// LRU balancer maintains the server list and access history
-type LRU struct {
-	head  *Node
-	tail  *Node
-	cache map[string]*Node // Map server address to its corresponding node in the list
+type LeastConnections struct {
+	servers []*ServerLC
+	mu      sync.Mutex
 }
 
-// NewLRU creates a new LRU balancer instance
-func NewLRU() *LRU {
-	return &LRU{
-		cache: make(map[string]*Node),
+func NewLeastConnections(addrs []string) *LeastConnections {
+	servers := make([]*ServerLC, len(addrs))
+	for i, addr := range addrs {
+		servers[i] = &ServerLC{Addr: addr}
 	}
+	return &LeastConnections{servers: servers}
 }
 
-// AddServer adds a server to the LRU pool
-func (lru *LRU) AddServer(server *ServerLRU) {
-	newNode := &Node{Server: server}
-	if lru.head == nil {
-		lru.head = newNode
-		lru.tail = newNode
-	} else {
-		newNode.Next = lru.head
-		lru.head.Prev = newNode
-		lru.head = newNode
+func (lc *LeastConnections) SelectServer() *ServerLC {
+	lc.mu.Lock()
+	defer lc.mu.Unlock()
+
+	// Find server with the least number of active connections
+	var minActive int = math.MaxInt
+	var selectedServer *ServerLC
+	for _, server := range lc.servers {
+		server.mu.Lock()
+		active := server.Active
+		server.mu.Unlock()
+		if active < minActive {
+			minActive = active
+			selectedServer = server
+		}
 	}
-	lru.cache[server.Addr] = newNode
+	if selectedServer != nil {
+		selectedServer.mu.Lock()
+		selectedServer.Active++
+		selectedServer.mu.Unlock()
+	}
+	return selectedServer
 }
 
-// GetServer retrieves the least recently contacted server and updates its position
-func (lru *LRU) GetServer(addr string) *ServerLRU {
-	node, ok := lru.cache[addr]
-	if !ok {
-		return nil
-	}
-
-	if node == lru.head {
-		return node.Server
-	}
-
-	// Move the node to the head, indicating recent access
-	if node.Prev != nil {
-		node.Prev.Next = node.Next
-	}
-	if node.Next != nil {
-		node.Next.Prev = node.Prev
-	}
-	if lru.tail == node {
-		lru.tail = node.Prev
-	}
-
-	node.Next = lru.head
-	node.Prev = nil
-	lru.head.Prev = node
-	lru.head = node
-	return node.Server
-
-} //LRU
-
-// call RB algorithm
+// Call RB algorithm
 func callRB(requests int) [10]int {
 	/** --------------------------------Stimulate RB algorithm */
 	fmt.Printf("Simulating RB algorithm\n")
@@ -225,7 +206,7 @@ func callRB(requests int) [10]int {
 	return hits
 } //LRU
 
-// call P2R algorithm
+// Call P2R algorithm
 func callP2R(requests int) [10]int {
 	/** --------------------------------Stimulate P2R algorithm */
 	//Define P2R servers
@@ -259,9 +240,9 @@ func callP2R(requests int) [10]int {
 
 	return hits
 
-} //LRU
+} //P2R
 
-// call WRB algorithm
+// Call WRB algorithm
 func callWRB(requests int) [10]int {
 	/** ---------------------------------Weighted Round Robin ALgorithm */
 	fmt.Printf("\nSimulating weighted RB algorithm\n")
@@ -296,44 +277,45 @@ func callWRB(requests int) [10]int {
 	return hits
 } //
 
-// call LRU algorithm
-func callLRU() {
+// Call Least connections algorithm
+func callLC(requests int) [10]int {
 	/** --------------------------------Stimulate LRU algorithm */
-	fmt.Printf("\n Simulating LRU algorithm\n")
-	// Define some backend servers
-	servers := []*ServerLRU{
-		{Addr: "server1:8080"},
-		{Addr: "server2:8080"},
-		{Addr: "server3:8080"},
+	serversLC := []string{
+		"server1",
+		"server2",
+		"server3",
+		"server4",
+		"server5",
+		"server6",
+		"server7",
+		"server8",
+		"server9",
+		"server10",
 	}
 
-	balancer := NewLRU()
+	// Create LeastConnections balancer
+	balancer := NewLeastConnections(serversLC)
 
-	// Add servers to the LRU pool
-	for _, server := range servers {
-		balancer.AddServer(server)
+	// Simulate requests (replace with your actual logic)
+	var hits = [10]int{}
+	for i := 0; i < requests; i++ {
+		server := balancer.SelectServer()
+		// Simulate handling the request
+		fmt.Printf("Request %d sent to server %s (Active connections: %d)\n", i+1, server.Addr, server.Active)
+
+		//Update hits
+		n, _ := strconv.Atoi(string(server.Addr[len(server.Addr)-1]))
+		hits[n] = hits[n] + 1
+
+		// Simulate connection closing (replace with actual logic)
+		time.Sleep(time.Duration(rand.Intn(100)) * time.Millisecond) // Simulate random processing time
+		server.mu.Lock()
+		server.Active--
+		server.mu.Unlock()
 	}
 
-	// Simulate handling requests
-	for i := 0; i < 5; i++ {
-		// Access server2 twice to simulate recent contact
-		server := balancer.GetServer("server2:8080")
-		if server != nil {
-			fmt.Printf("Sending request (access 1) to server: %s\n", server.Addr)
-		}
-		server = balancer.GetServer("server2:8080")
-		if server != nil {
-			fmt.Printf("Sending request (access 2) to server: %s\n", server.Addr)
-		}
-
-		// Access a different server
-		server = balancer.GetServer("server1:8080")
-		if server != nil {
-			fmt.Printf("Sending request to server: %s\n", server.Addr)
-		}
-
-	}
-
+	//Return
+	return hits
 }
 
 func generateLoadBalancingItems(hits [10]int) []opts.BarData {
@@ -349,10 +331,6 @@ func generateLoadBalancingItems(hits [10]int) []opts.BarData {
 	return items
 }
 
-func httpserverHome(w http.ResponseWriter, _ *http.Request) {
-
-}
-
 func httpserverLoadBalancing(w http.ResponseWriter, _ *http.Request) {
 	// create a new line instance
 	bar := charts.NewBar()
@@ -361,28 +339,28 @@ func httpserverLoadBalancing(w http.ResponseWriter, _ *http.Request) {
 	bar.SetGlobalOptions(
 		charts.WithInitializationOpts(opts.Initialization{Theme: types.ThemeWesteros}),
 		charts.WithTitleOpts(opts.Title{
-			Title:    "Line example in Westeros theme",
-			Subtitle: "Line chart rendered by the http server this time",
+			Title:    "",
+			Subtitle: "",
 		}))
 
 	// Put data into instance
-	hitsRB := callRB(10)
-	hitsP2R := callP2R(10)
-	hitsWRB := callWRB(10)
+	hitsRB := callRB(100)
+	hitsP2R := callP2R(100)
+	hitsWRB := callWRB(100)
+	hitsLC := callLC(100)
 	bar.SetXAxis([]string{"Server1", "Server2", "Server3", "Server4", "Server5", "Server6", "Server7", "Server8", "Server9", "Server10"}).
-		AddSeries("Category Round Bobin", generateLoadBalancingItems(hitsRB)).
-		AddSeries("Category Power of 2 Random", generateLoadBalancingItems(hitsP2R)).
-		AddSeries("Category Weighted Round Robin", generateLoadBalancingItems(hitsWRB))
+		AddSeries("Round Bobin", generateLoadBalancingItems(hitsRB)).
+		AddSeries("Power of 2 Random", generateLoadBalancingItems(hitsP2R)).
+		AddSeries("Weighted Round Robin", generateLoadBalancingItems(hitsWRB)).
+		AddSeries("Least Connections", generateLoadBalancingItems(hitsLC))
 
 	bar.Render(w)
-
 }
 
 func main() {
 
 	//create a new line instantce
 	http.HandleFunc("/", httpserverLoadBalancing)
-	http.HandleFunc("/lb", httpserverLoadBalancing)
 
 	//Call http services
 	http.ListenAndServe(":8081", nil)
