@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/go-echarts/go-echarts/v2/charts"
@@ -195,6 +196,7 @@ func callRB(requests int) [10]int {
 	fmt.Printf("Simulating RB algorithm\n")
 	// Define RB servers
 	serversRB := []*ServerRB{
+		{Addr: "server0"},
 		{Addr: "server1"},
 		{Addr: "server2"},
 		{Addr: "server3"},
@@ -204,7 +206,6 @@ func callRB(requests int) [10]int {
 		{Addr: "server7"},
 		{Addr: "server8"},
 		{Addr: "server9"},
-		{Addr: "server10"},
 	}
 
 	balancerRB := NewBalancerRB(serversRB)
@@ -212,8 +213,13 @@ func callRB(requests int) [10]int {
 	var hits = [10]int{}
 	for i := 0; i < requests; i++ {
 		server := balancerRB.NextServer()
-		fmt.Printf("Sending request to server: %s\n", server.Addr)
-		hits[server.Addr[len(server.Addr)-1]] = hits[server.Addr[len(server.Addr)-1]] + 1
+		n, _ := strconv.Atoi(string(server.Addr[len(server.Addr)-1]))
+		fmt.Printf("Sending request to server: %d\n", n)
+		hits[n] = hits[n] + 1
+	}
+
+	for i := 0; i < 10; i++ {
+		fmt.Printf("%d", hits[i])
 	}
 
 	return hits
@@ -224,6 +230,7 @@ func callP2R(requests int) [10]int {
 	/** --------------------------------Stimulate P2R algorithm */
 	//Define P2R servers
 	serversP2R := []*ServerP2R{
+		{Addr: "server0"},
 		{Addr: "server1"},
 		{Addr: "server2"},
 		{Addr: "server3"},
@@ -233,7 +240,6 @@ func callP2R(requests int) [10]int {
 		{Addr: "server7"},
 		{Addr: "server8"},
 		{Addr: "server9"},
-		{Addr: "server10"},
 	}
 
 	balancerP2R := NewBalancerP2R(serversP2R)
@@ -242,8 +248,13 @@ func callP2R(requests int) [10]int {
 	var hits = [10]int{}
 	for i := 0; i < requests; i++ {
 		server := balancerP2R.SelectServer()
-		fmt.Printf("Sending request to server: %s\n", server.Addr)
-		hits[server.Addr[len(server.Addr)-1]] = hits[server.Addr[len(server.Addr)-1]] + 1
+		n, _ := strconv.Atoi(string(server.Addr[len(server.Addr)-1]))
+		fmt.Printf("Sending request to server: %d \n", server.Addr)
+		hits[n] = hits[n] + 1
+	}
+
+	for i := 0; i < 10; i++ {
+		fmt.Printf("%d", hits[i])
 	}
 
 	return hits
@@ -255,16 +266,16 @@ func callWRB(requests int) [10]int {
 	/** ---------------------------------Weighted Round Robin ALgorithm */
 	fmt.Printf("\nSimulating weighted RB algorithm\n")
 	serversWRR := []*Server{
-		{Addr: "server1"},
-		{Addr: "server2"},
-		{Addr: "server3"},
-		{Addr: "server4"},
-		{Addr: "server5"},
-		{Addr: "server6"},
-		{Addr: "server7"},
-		{Addr: "server8"},
-		{Addr: "server9"},
-		{Addr: "server10"},
+		{Addr: "server0", Weight: 9},
+		{Addr: "server1", Weight: 8},
+		{Addr: "server2", Weight: 7},
+		{Addr: "server3", Weight: 6},
+		{Addr: "server4", Weight: 5},
+		{Addr: "server5", Weight: 4},
+		{Addr: "server6", Weight: 3},
+		{Addr: "server7", Weight: 2},
+		{Addr: "server8", Weight: 1},
+		{Addr: "server9", Weight: 0},
 	}
 
 	balancerWRR := NewBalancer(serversWRR)
@@ -273,8 +284,13 @@ func callWRB(requests int) [10]int {
 	var hits = [10]int{}
 	for i := 0; i < requests; i++ {
 		server := balancerWRR.NextServer()
+		n, _ := strconv.Atoi(string(server.Addr[len(server.Addr)-1]))
 		fmt.Printf("Sending request to server: %s (weight: %d)\n", server.Addr, server.Weight)
-		hits[server.Addr[len(server.Addr)-1]] = hits[server.Addr[len(server.Addr)-1]] + 1
+		hits[n] = hits[n] + 1
+	}
+
+	for i := 0; i < 10; i++ {
+		fmt.Printf("%d", hits[i])
 	}
 
 	return hits
@@ -350,10 +366,13 @@ func httpserverLoadBalancing(w http.ResponseWriter, _ *http.Request) {
 		}))
 
 	// Put data into instance
+	hitsRB := callRB(10)
+	hitsP2R := callP2R(10)
+	hitsWRB := callWRB(10)
 	bar.SetXAxis([]string{"Server1", "Server2", "Server3", "Server4", "Server5", "Server6", "Server7", "Server8", "Server9", "Server10"}).
-		AddSeries("Category Round Bobin", generateLoadBalancingItems(callRB(10000))).
-		AddSeries("Category Power of 2 Random", generateLoadBalancingItems(callP2R(10000))).
-		AddSeries("Category Weighted Round Robin", generateLoadBalancingItems(callWRB(10000)))
+		AddSeries("Category Round Bobin", generateLoadBalancingItems(hitsRB)).
+		AddSeries("Category Power of 2 Random", generateLoadBalancingItems(hitsP2R)).
+		AddSeries("Category Weighted Round Robin", generateLoadBalancingItems(hitsWRB))
 
 	bar.Render(w)
 
@@ -362,7 +381,7 @@ func httpserverLoadBalancing(w http.ResponseWriter, _ *http.Request) {
 func main() {
 
 	//create a new line instantce
-	http.HandleFunc("/", httpserverHome)
+	http.HandleFunc("/", httpserverLoadBalancing)
 	http.HandleFunc("/lb", httpserverLoadBalancing)
 
 	//Call http services
